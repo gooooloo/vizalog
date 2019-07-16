@@ -1,4 +1,5 @@
 import sys
+import os
 import asyncio
 from asyncqt import QEventLoop, asyncSlot, asyncClose
 from PyQt5.QtWidgets import (
@@ -70,9 +71,13 @@ class MainWindow(QMainWindow):
         self.stop_log_action.triggered.connect(self.on_stop_log)
         self.stop_log_action.setEnabled(False)
 
+        self.clear_log_action = QAction('Clear', self)
+        self.clear_log_action.triggered.connect(self.on_clear_log)
+
         toolbar = QToolBar()
         toolbar.addAction(self.start_log_action)
         toolbar.addAction(self.stop_log_action)
+        toolbar.addAction(self.clear_log_action)
         self.addToolBar(toolbar)
 
         # OTHERS
@@ -91,6 +96,19 @@ class MainWindow(QMainWindow):
                 tv.appendPlainText(sss)
 
         return foo
+
+    def on_clear_log(self):
+
+        def clear_log():
+            os.system('adb logcat -c')
+            # TODO: clear all sub widget's content
+
+        if self.is_fetching:
+            self.on_stop_log()
+            clear_log()
+            self.on_start_log()
+        else:
+            clear_log()
 
     def on_stop_log(self):
         self.start_log_action.setEnabled(True)
