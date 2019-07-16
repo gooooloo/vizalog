@@ -52,14 +52,11 @@ class MainWindow(QMainWindow):
 
         # MDI
         self.mdiArea = QMdiArea(self)
-        self.mdiArea.addSubWindow(
-            self.add_mdi_widget(
-                my_title="mm-camera",
-                my_filter=lambda s: 'mm-camera' in s))
-        self.mdiArea.addSubWindow(
-            self.add_mdi_widget(
-                my_title="MiuiGallery",
-                my_filter=lambda s: 'MiuiGallery2_TileView' in s))
+        for kw in ('ARC_SN_Process', 'mCaptureStartTime'):
+            self.mdiArea.addSubWindow(
+                self.add_mdi_widget(
+                    my_title=kw,
+                    my_filter=lambda s,kw=kw: kw in s))
         self.setCentralWidget(self.mdiArea)
 
         # TOOL BAR
