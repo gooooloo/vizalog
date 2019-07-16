@@ -80,6 +80,9 @@ class MainWindow(QMainWindow):
 
         self.resize(2000, 1000)
 
+        # we set auto-start
+        self.on_start_log()
+
     @staticmethod
     def make_slot(tv, my_filter):
         @pyqtSlot(str)
