@@ -106,7 +106,10 @@ class MainWindow(QMainWindow):
         try:
             while self.is_fetching:
                 data = await proc.stdout.readline()
-                line = data.decode().rstrip()
+                try:
+                    line = data.decode().rstrip()
+                except Exception as e:
+                    line = data.decode('ISO-8859-1').rstrip()
                 self.new_log_line.emit(line)
         except Exception as exc:
             print(exc)
