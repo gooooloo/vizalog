@@ -20,6 +20,7 @@ from PyQt5.QtWidgets import (
     QMainWindow)
 from PyQt5.QtCore import (QObject, pyqtSignal, pyqtSlot)
 
+loop = None
 
 class MainWindow(QMainWindow):
 
@@ -81,9 +82,9 @@ class MainWindow(QMainWindow):
         self.addToolBar(toolbar)
 
         # OTHERS
-        self.is_fetching = False
-
         self.resize(2000, 1000)
+
+        self.log_task = None
 
         # we set auto-start
         self.on_start_log()
@@ -103,7 +104,7 @@ class MainWindow(QMainWindow):
             os.system('adb logcat -c')
             # TODO: clear all sub widget's content
 
-        if self.is_fetching:
+        if self.log_task:
             self.on_stop_log()
             clear_log()
             self.on_start_log()
@@ -111,33 +112,39 @@ class MainWindow(QMainWindow):
             clear_log()
 
     def on_stop_log(self):
+        self.log_task.cancel()
+        self.log_task = None
+
         self.start_log_action.setEnabled(True)
         self.stop_log_action.setEnabled(False)
         self.statusBar().showMessage('Stopped.')
-        self.is_fetching = False
 
-    @asyncSlot()
-    async def on_start_log(self):
+    def on_start_log(self):
         self.start_log_action.setEnabled(False)
         self.stop_log_action.setEnabled(True)
         self.statusBar().showMessage('Fetching...')
-        self.is_fetching = True
+        global loop
+        self.log_task = loop.create_task(self.get_logs())
 
+    async def get_logs(self):
         proc = await asyncio.create_subprocess_shell('adb logcat -v time', stdout=asyncio.subprocess.PIPE)
         try:
-            while self.is_fetching:
+            while True:
                 data = await proc.stdout.readline()
                 try:
                     line = data.decode().rstrip()
                 except Exception as e:
                     line = data.decode('ISO-8859-1').rstrip()
                 self.new_log_line.emit(line)
+        except asyncio.CancelledError :
+            pass
         except Exception as exc:
             print(exc)
             self.statusBar().showMessage('Error: {}'.format(exc))
 
+def main():
+    global loop
 
-if __name__ == '__main__':
     app = QApplication(sys.argv)
     loop = QEventLoop(app)
     asyncio.set_event_loop(loop)
@@ -147,3 +154,7 @@ if __name__ == '__main__':
 
     with loop:
         sys.exit(loop.run_forever())
+
+
+if __name__ == '__main__':
+    main()
