@@ -45,6 +45,9 @@ class MainWindow(QMainWindow):
 
         self.new_log_line.connect(self.make_slot(te, my_filter))
 
+        # TODO: using parent's width, get rid of hard coded width
+        wdg1.setFixedWidth(1800)
+
         return wdg1
 
     def __init__(self):
