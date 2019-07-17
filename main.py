@@ -22,6 +22,7 @@ from PyQt5.QtCore import (QObject, pyqtSignal, pyqtSlot)
 
 loop = None
 
+
 class MainWindow(QMainWindow):
 
     new_log_line = pyqtSignal(str, name='new_log_line')
@@ -61,7 +62,7 @@ class MainWindow(QMainWindow):
             self.mdiArea.addSubWindow(
                 self.add_mdi_widget(
                     my_title=kw,
-                    my_filter=lambda s,kw=kw: kw in s))
+                    my_filter=lambda s, kw=kw: kw in s))
         self.setCentralWidget(self.mdiArea)
 
         # TOOL BAR
@@ -136,11 +137,12 @@ class MainWindow(QMainWindow):
                 except Exception as e:
                     line = data.decode('ISO-8859-1').rstrip()
                 self.new_log_line.emit(line)
-        except asyncio.CancelledError :
+        except asyncio.CancelledError:
             pass
         except Exception as exc:
             print(exc)
             self.statusBar().showMessage('Error: {}'.format(exc))
+
 
 def main():
     global loop
