@@ -18,7 +18,7 @@ from PyQt5.QtWidgets import (
     QAction,
     QMenuBar,
     QToolBar,
-    QMainWindow)
+    QMainWindow, QDialog, QGridLayout, QDialogButtonBox)
 from PyQt5.QtCore import (QObject, pyqtSignal, pyqtSlot)
 
 loop = None
@@ -79,10 +79,14 @@ class MainWindow(QMainWindow):
         self.clear_log_action = QAction('Clear', self)
         self.clear_log_action.triggered.connect(self.on_clear_log)
 
+        self.new_filter_action = QAction('New_Filter', self)
+        self.new_filter_action.triggered.connect(self.on_new_filter)
+
         toolbar = QToolBar()
         toolbar.addAction(self.start_log_action)
         toolbar.addAction(self.stop_log_action)
         toolbar.addAction(self.clear_log_action)
+        toolbar.addAction(self.new_filter_action)
         self.addToolBar(toolbar)
 
         # OTHERS
@@ -134,6 +138,26 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage('Fetching...')
         global loop
         self.log_task = loop.create_task(self.get_logs())
+
+    def on_new_filter(self):
+        ok = QPushButton('ok')
+        cancel = QPushButton('cancel')
+
+        layout = QGridLayout()
+        layout.addWidget(ok, 3, 1)
+        layout.addWidget(cancel, 3, 2)
+
+        my_dialog = QDialog(self)
+        my_dialog.setLayout(layout)
+
+        def mycb():
+            # TODO: add filter and show dialog
+            my_dialog.accept()
+
+        ok.clicked.connect(mycb)
+        cancel.clicked.connect(my_dialog.reject)
+
+        my_dialog.exec_()
 
     async def get_logs(self):
         proc = await asyncio.create_subprocess_shell('adb logcat -v threadtime', stdout=asyncio.subprocess.PIPE)
