@@ -90,6 +90,11 @@ class MainWindow(QMainWindow):
         # we set auto-start
         self.on_start_log()
 
+        global loop
+        loop.create_task(self.get_pid())
+
+        self.pid_name_list = []
+
     @staticmethod
     def make_slot(tv, my_filter):
         @pyqtSlot(str)
@@ -137,6 +142,27 @@ class MainWindow(QMainWindow):
                 except Exception as e:
                     line = data.decode('ISO-8859-1').rstrip()
                 self.new_log_line.emit(line)
+        except asyncio.CancelledError:
+            pass
+        except Exception as exc:
+            print(exc)
+            self.statusBar().showMessage('Error: {}'.format(exc))
+
+    async def get_pid(self):
+        try:
+            while True:
+                data = os.popen('adb shell ps').read()
+                lines = data.split('\n')
+                fields = lines[0].split()
+                assert fields[1] == 'PID'
+                assert fields[-1] == 'NAME'
+
+                fields = [line.split() for line in lines[1:]]
+                self.pid_name_list = [(field[1], field[-1])
+                                      for field in fields if field]
+                print(self.pid_name_list)
+
+                await asyncio.sleep(1)
         except asyncio.CancelledError:
             pass
         except Exception as exc:
