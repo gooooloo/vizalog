@@ -1,6 +1,7 @@
 import sys
 import os
 import asyncio
+from collections import namedtuple
 from asyncqt import QEventLoop, asyncSlot, asyncClose
 from PyQt5.QtWidgets import (
     QApplication,
@@ -22,10 +23,12 @@ from PyQt5.QtCore import (QObject, pyqtSignal, pyqtSlot)
 
 loop = None
 
+LOG_LINE = namedtuple('LOG_LINE', ['date', 'time', 'pid', 'pname', 'tid', 'level', 'msg'])
+
 
 class MainWindow(QMainWindow):
 
-    new_log_line = pyqtSignal(str, name='new_log_line')
+    new_log_line = pyqtSignal(object, name='new_log_line')
 
     def add_mdi_widget(self, my_title, my_filter):
         wdg1 = QWidget()
@@ -62,7 +65,7 @@ class MainWindow(QMainWindow):
             self.mdiArea.addSubWindow(
                 self.add_mdi_widget(
                     my_title=kw,
-                    my_filter=lambda s, kw=kw: kw in s))
+                    my_filter=lambda s, kw=kw: kw in s.msg))
         self.setCentralWidget(self.mdiArea)
 
         # TOOL BAR
@@ -93,14 +96,14 @@ class MainWindow(QMainWindow):
         global loop
         loop.create_task(self.get_pid())
 
-        self.pid_name_list = []
+        self.pid_name_dict = dict()
 
     @staticmethod
     def make_slot(tv, my_filter):
         @pyqtSlot(str)
         def foo(sss):
             if my_filter(sss):
-                tv.appendPlainText(sss)
+                tv.appendPlainText(sss.msg)  # TODO: more content to add
 
         return foo
 
@@ -133,7 +136,7 @@ class MainWindow(QMainWindow):
         self.log_task = loop.create_task(self.get_logs())
 
     async def get_logs(self):
-        proc = await asyncio.create_subprocess_shell('adb logcat -v time', stdout=asyncio.subprocess.PIPE)
+        proc = await asyncio.create_subprocess_shell('adb logcat -v threadtime', stdout=asyncio.subprocess.PIPE)
         try:
             while True:
                 data = await proc.stdout.readline()
@@ -141,6 +144,13 @@ class MainWindow(QMainWindow):
                     line = data.decode().rstrip()
                 except Exception as e:
                     line = data.decode('ISO-8859-1').rstrip()
+                if not line:
+                    continue
+                if line[0] == '-':  # TODO: more reliable way
+                    continue
+                line = line.split(None, 5)
+                pname = self.get_pname(line[2])
+                line = LOG_LINE(date=line[0], time=line[1], pid=line[2], tid=line[3], level=line[4], msg=line[5], pname=pname)
                 self.new_log_line.emit(line)
         except asyncio.CancelledError:
             pass
@@ -158,9 +168,8 @@ class MainWindow(QMainWindow):
                 assert fields[-1] == 'NAME'
 
                 fields = [line.split() for line in lines[1:]]
-                self.pid_name_list = [(field[1], field[-1])
-                                      for field in fields if field]
-                print(self.pid_name_list)
+                self.pid_name_dict = dict([(field[1], field[-1])
+                                           for field in fields if field])
 
                 await asyncio.sleep(1)
         except asyncio.CancelledError:
@@ -168,6 +177,9 @@ class MainWindow(QMainWindow):
         except Exception as exc:
             print(exc)
             self.statusBar().showMessage('Error: {}'.format(exc))
+
+    def get_pname(self, pid):
+        return self.pid_name_dict[pid] if pid in self.pid_name_dict else None
 
 
 def main():
